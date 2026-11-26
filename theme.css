@@ -1,0 +1,73 @@
+/* VOICE: calm, discreet, a private household's own service book
+   IDEA: the house's engraved menu card and guest book: ivory stock, navy ink, a fine gilt rule
+   PICTURE: the working lists themselves, set like printed cards under a navy masthead
+   COLOUR and TYPE: navy #14213d masthead, ivory ground, gilt hairlines; Cormorant Garamond titles, Inter text
+   LAYOUT: one phone column, masthead with search, cards with generous air, bottom tabs */
+@font-face{font-family:"Cormorant Garamond";font-weight:500;font-display:swap;src:url(fonts/cormorant-garamond-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"Cormorant Garamond";font-weight:600;font-display:swap;src:url(fonts/cormorant-garamond-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Cormorant Garamond";font-weight:700;font-display:swap;src:url(fonts/cormorant-garamond-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"Inter";font-weight:400;font-display:swap;src:url(fonts/inter-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Inter";font-weight:500;font-display:swap;src:url(fonts/inter-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"Inter";font-weight:600;font-display:swap;src:url(fonts/inter-latin-600-normal.woff2) format("woff2")}
+
+#root{
+ --k-bg:light-dark(#f6f1e7,#0d1424);--k-paper:light-dark(#fffdf8,#152036);--k-ink:light-dark(#14213d,#efe9dc);
+ --k-muted:light-dark(#6f6a5f,#a7a293);--k-hair:light-dark(#e4dccb,#26324d);--k-band:light-dark(#efe8d9,#1c2943);
+ --k-rail:#14213d;--k-rail-ink:#f6f1e7;--k-accent:light-dark(#14213d,#d8c18f);--k-accent-ink:light-dark(#f6f1e7,#14213d);
+ --k-gilt:light-dark(#b0924f,#c9ad6e);--k-danger:light-dark(#9b2c2c,#ef8a7d);--k-ok:light-dark(#2f5d4a,#8fc9ad);--k-warn:light-dark(#8a6a24,#d8c18f);
+ --k-display:"Cormorant Garamond",Georgia,"Times New Roman",serif;--k-body:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+ font-family:var(--k-body);letter-spacing:.005em}
+body{background:var(--k-bg,#f6f1e7)}
+
+/* masthead */
+#root header{padding:calc(18px + env(safe-area-inset-top,0px)) 20px 16px;border-bottom:1px solid var(--k-gilt);box-shadow:0 1px 0 rgba(0,0,0,.25)}
+#root h1{font:600 28px/1 var(--k-display);letter-spacing:.06em}
+#root h1 b{color:var(--k-gilt);font-weight:600}
+#root .sub{color:#c9c2b0;font-size:12px}
+#root .more{color:#c9c2b0}
+#root .ksearch{margin-top:14px}
+#root .ksearch input{background:rgba(255,255,255,.08);color:#f6f1e7;border:1px solid rgba(246,241,231,.22);border-radius:22px;height:44px}
+#root .ksearch input::placeholder{color:#b9b3a2}
+#root .add{background:transparent;color:#f6f1e7;border:1px solid var(--k-gilt);border-radius:22px;font-weight:500}
+
+/* lists */
+#root .kmain{padding:6px 16px 32px}
+#root .gh{font:600 20px/1.1 var(--k-display);color:var(--k-ink);letter-spacing:.02em;padding:26px 4px 10px;border-bottom:1px solid var(--k-gilt);margin-bottom:12px;align-items:baseline}
+#root .gh span:last-child{font:500 12px var(--k-body);color:var(--k-muted)}
+#root .tk{border:1px solid var(--k-hair);border-radius:4px;padding:16px 18px;margin:0 0 10px;box-shadow:0 1px 2px rgba(20,33,61,.05)}
+#root .tk h3{font:600 21px/1.2 var(--k-display);letter-spacing:.01em}
+#root .tk p{font-size:13.5px;margin-top:4px}
+#root .pill{background:transparent;border:1px solid var(--k-hair);border-radius:2px;font-weight:500;font-size:11px;letter-spacing:.04em;color:var(--k-muted)}
+#root .pill.Draft{color:var(--k-warn);border-color:currentColor}#root .pill.Sent{color:var(--k-ink);border-color:currentColor}#root .pill.Delivered{color:var(--k-ok);border-color:currentColor}
+#root .tel{background:var(--k-ink);color:var(--k-bg);border-radius:22px;font-weight:500}
+#root .empty b{font:600 24px var(--k-display)}
+
+/* tabs */
+#root nav.tabs{border-top:1px solid var(--k-gilt)}
+#root nav.tabs a{font-weight:500;letter-spacing:.02em}
+#root nav.tabs a.on{color:var(--k-ink)}
+#root nav.tabs a.on svg{stroke:var(--k-gilt)}
+
+/* sheets & detail */
+#root .kcard{border-radius:14px 14px 0 0;border-top:3px solid var(--k-gilt)}
+#root .kcard h2,#root .rhead h2{font:600 34px/1.05 var(--k-display);letter-spacing:.01em}
+#root .kmeta{font-size:13px;letter-spacing:.02em}
+#root .seg{border-radius:22px;background:var(--k-band)}
+#root .seg button{border-radius:20px;font-weight:500}
+#root .seg button.on{background:var(--k-ink);color:var(--k-bg);box-shadow:none}
+#root .king tr.h td{font:600 17px var(--k-display);letter-spacing:.03em;color:var(--k-ink);border-bottom:1px solid var(--k-gilt)}
+#root .blk h4{font:600 19px var(--k-display);color:var(--k-ink);letter-spacing:.02em}
+#root .note{background:transparent;border-left:2px solid var(--k-gilt);border-radius:0;font-weight:500;padding:6px 0 6px 14px}
+#root .algbox{border:1px solid var(--k-danger);border-radius:4px;background:light-dark(#fbf1ef,#2a1a1f)}
+#root .algbox h4{font:600 18px var(--k-display);letter-spacing:.04em}
+#root .kbtn{border-radius:22px;font-weight:500;border-color:var(--k-hair)}
+#root .kbtn.pri{background:var(--k-ink);color:var(--k-bg);border-color:var(--k-ink)}
+#root .back{color:var(--k-muted);font-weight:500}
+#root form input,#root form select,#root form textarea{border-radius:6px;background:var(--k-paper)}
+#root .lines a{color:var(--k-ink);text-decoration-color:var(--k-gilt);text-underline-offset:3px}
+
+/* sign in */
+#root .auth{padding-top:calc(56px + env(safe-area-inset-top,0px))}
+#root .auth h2{font:600 40px/1.05 var(--k-display);letter-spacing:.03em;border-bottom:1px solid var(--k-gilt);padding-bottom:12px}
+#root .auth a{color:var(--k-ink);text-decoration-color:var(--k-gilt)}
+#root .auth .kbtn.pri{border-radius:24px;height:48px}
