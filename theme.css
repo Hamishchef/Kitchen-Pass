@@ -74,7 +74,7 @@ body{background:var(--k-bg,#f6f1e7)}
 
 /* PASS wordmark: sun-burned letters on a small wood plaque */
 #root .wm{margin:0;line-height:0;text-shadow:none}
-#root header .wm svg{height:46px;width:auto;display:block;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+#root header .wm svg{height:48px;width:auto;display:block}
 #root .auth .wm{border-bottom:0;padding:0;margin:0 0 18px}
-#root .auth .wm svg{width:240px;height:auto;display:block;filter:drop-shadow(0 3px 6px rgba(20,33,61,.25))}
+#root .auth .wm svg{width:150px;height:auto;display:block;border-radius:4px;box-shadow:0 4px 12px rgba(20,33,61,.25)}
 #root header .top{align-items:center}
