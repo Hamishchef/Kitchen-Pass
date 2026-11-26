@@ -274,15 +274,29 @@ async function sync(){
 }
 
 /* ---------- sign in ---------- */
-function authScreen(step,email,msg){
+const SITE=location.origin+location.pathname;
+function authScreen(step,msg){
   $("kp").hidden=true;let a=$("auth");if(!a){a=document.createElement("div");a.id="auth";a.className="auth";$("root").appendChild(a);}a.hidden=false;
-  a.innerHTML=!sb?`<h2>Kitchen Pass</h2><p>This copy isn't connected to its database yet. Fill in config.js with the Supabase project URL and anon key.</p>`
-   :step==="code"?`<h2>Check your email</h2><p>We sent a 6-digit code to ${esc(email)}.</p><form id="codeF"><label for="code">Code</label><input id="code" inputmode="numeric" autocomplete="one-time-code" required><button class="kbtn pri">Sign in</button></form><p class="err">${esc(msg||"")}</p><p><a href="#" id="restart">Use a different email</a></p>`
-   :`<h2>Kitchen Pass</h2><p>Recipes, residences and family preferences for the kitchen team. Sign in with the email Hamish added to the team.</p><form id="emailF"><label for="em">Email</label><input id="em" type="email" autocomplete="email" required value="${esc(email||"")}"><button class="kbtn pri">Send me a code</button></form><p class="err">${esc(msg||"")}</p>`;
-  const ef=$("emailF"),cf=$("codeF");
-  if(ef)ef.onsubmit=async e=>{e.preventDefault();const em=$("em").value.trim().toLowerCase();const{error}=await sb.auth.signInWithOtp({email:em,options:{shouldCreateUser:true}});error?authScreen("email",em,error.message):authScreen("code",em);};
-  if(cf)cf.onsubmit=async e=>{e.preventDefault();const{data,error}=await sb.auth.verifyOtp({email,token:$("code").value.trim(),type:"email"});if(error)return authScreen("code",email,error.message);start(data.session);};
-  if($("restart"))$("restart").onclick=e=>{e.preventDefault();authScreen("email");};
+  const tab=step==="join"?"join":step==="claim"?"claim":"in";
+  a.innerHTML=!sb?`<h2>Kitchen Pass</h2><p>This copy isn't connected to its database yet.</p>`
+   :tab==="claim"?`<h2>Enter your invite code</h2><p>You're signed in, but your account isn't linked to the team yet. Enter the 6-letter code Hamish sent you.</p><form id="claimF"><label for="cc">Invite code</label><input id="cc" autocapitalize="characters" autocomplete="off" required><button class="kbtn pri">Join the team</button></form><p class="err">${esc(msg||"")}</p><p><a href="#" data-auth="out">Sign out</a></p>`
+   :tab==="join"?`<h2>First time here</h2><p>Use the email and invite code Hamish sent you, and choose a password.</p><form id="joinF"><label for="je">Email</label><input id="je" type="email" autocomplete="email" required><label for="jc">Invite code</label><input id="jc" autocapitalize="characters" autocomplete="off" required><label for="jp">Choose a password (8+ characters)</label><input id="jp" type="password" autocomplete="new-password" minlength="8" required><button class="kbtn pri">Create my account</button></form><p class="err">${esc(msg||"")}</p><p><a href="#" data-auth="in">I already have a password</a></p>`
+   :`<h2>Kitchen Pass</h2><p>Recipes, residences and family preferences for the kitchen team.</p><form id="inF"><label for="ie">Email</label><input id="ie" type="email" autocomplete="email" required><label for="ip">Password</label><input id="ip" type="password" autocomplete="current-password" required><button class="kbtn pri">Sign in</button></form><p class="err">${esc(msg||"")}</p><p><a href="#" data-auth="join">First time? I have an invite code</a></p><p class="kmeta">Forgotten your password? Ask Hamish for a new invite code.</p>`;
+  a.querySelectorAll("[data-auth]").forEach(l=>l.onclick=async e=>{e.preventDefault();if(l.dataset.auth==="out"){await sb.auth.signOut();authScreen("in");}else authScreen(l.dataset.auth);});
+  const busy=f=>{const b=f.querySelector("button");b.disabled=true;b.textContent="Please wait\u2026";};
+  const inF=$("inF"),joinF=$("joinF"),claimF=$("claimF");
+  if(inF)inF.onsubmit=async e=>{e.preventDefault();busy(inF);const{data,error}=await sb.auth.signInWithPassword({email:$("ie").value.trim().toLowerCase(),password:$("ip").value});
+    if(error)return authScreen("in",error.message==="Invalid login credentials"?"That email and password don't match. If you've forgotten it, ask Hamish for a new invite code.":error.message);start(data.session);};
+  if(joinF)joinF.onsubmit=async e=>{e.preventDefault();busy(joinF);const email=$("je").value.trim().toLowerCase(),password=$("jp").value,code=$("jc").value;
+    let{data,error}=await sb.auth.signUp({email,password});
+    if(error&&/already/i.test(error.message)){({data,error}=await sb.auth.signInWithPassword({email,password}));}
+    if(error)return authScreen("join",error.message);
+    if(!data.session)return authScreen("join","Account created but not signed in. Ask Hamish to switch off 'Confirm email' in Supabase.");
+    const{data:role,error:ce}=await sb.rpc("claim_invite",{code});
+    if(ce||!role){await sb.auth.signOut();return authScreen("join","That invite code doesn't match this email, or has already been used.");}
+    start(data.session);};
+  if(claimF)claimF.onsubmit=async e=>{e.preventDefault();busy(claimF);const{data:role}=await sb.rpc("claim_invite",{code:$("cc").value});
+    if(!role)return authScreen("claim","That code doesn't match your email, or has already been used.");const{data}=await sb.auth.getSession();start(data.session);};
 }
 async function start(session){
   S.user=session.user;const a=$("auth");if(a)a.hidden=true;$("kp").hidden=false;
@@ -290,22 +304,29 @@ async function start(session){
   if(cached&&cached!==S.user.email){await idb.clear();for(const c of COLS)S.data[c]={};}
   await idb.set("user",S.user.email);
   if(navigator.onLine){const{data,error}=await sb.rpc("my_role");if(!error){S.role=data;await idb.set("role",data);}}else S.role=await idb.get("role");
-  if(!S.role&&navigator.onLine){$("view").innerHTML=empty("Not on the team list yet",`${S.user.email} hasn't been added. Ask Hamish to add you, then reopen the app.`);return;}
+  if(!S.role&&navigator.onLine)return authScreen("claim");
   S.ready=true;render();await sync();
 }
 
 /* ---------- more menu: team, import, sign out ---------- */
 async function moreSheet(){
   let team="";
-  if(S.role==="admin"&&navigator.onLine){const{data}=await sb.from("members").select("email,role").order("email");
-    team=`<div class="blk"><h4>Team</h4>${(data||[]).map(m=>`<div class="mrow"><span>${esc(m.email)}${m.role==="admin"?" (admin)":""}</span>${m.email!==S.user.email?`<button class="kbtn del" data-rm="${esc(m.email)}">Remove</button>`:""}</div>`).join("")}
-     <form id="addM"><label for="nm">Add a chef by email</label><input id="nm" type="email" required><div class="acts"><button class="kbtn pri">Add to team</button></div></form></div>
+  if(S.role==="admin"&&navigator.onLine){const{data}=await sb.from("members").select("email,role,invite_code,claimed_by").order("email");
+    team=`<div class="blk"><h4>Team</h4>${(data||[]).map(m=>`<div class="mrow"><span>${esc(m.email)}${m.role==="admin"?" (admin)":""}<br><small class="kmeta">${m.claimed_by?"Active":"Waiting \u00b7 code "+esc(m.invite_code||"")}</small></span>${m.email!==S.user.email?`<span><button class="kbtn" data-reset="${esc(m.email)}" data-role="${esc(m.role)}">${m.claimed_by?"Reset":"New code"}</button> <button class="kbtn del" data-rm="${esc(m.email)}">Remove</button></span>`:""}</div>`).join("")}
+     <div id="invOut"></div>
+     <form id="addM"><label for="nm">Add a chef by email</label><input id="nm" type="email" required><div class="acts"><button class="kbtn pri">Add and get invite code</button></div></form></div>
      <div class="blk"><h4>Import from the Recipe Book</h4><p class="kmeta">Choose the file from "Export everything" on the old page. Existing items with the same id are replaced.</p><input type="file" id="imp" accept="application/json,.json"></div>`;}
   sheet(`<h2 id="sheetT">Kitchen Pass</h2><p class="kmeta">Signed in as ${esc(S.user?.email||"")}${S.role?" \u00b7 "+esc(S.role):""}</p>
    <p>${navigator.onLine?(syncErr?esc(syncErr):"Online. "+(lastSync?"Last synced "+lastSync.toLocaleTimeString():"")):"Offline. Changes are saved on this phone and sync when you're back online."}</p>
    <div class="acts"><button class="kbtn" data-act="syncnow">Sync now</button><button class="kbtn del" data-act="signout">Sign out</button></div>${team}`);
-  const am=$("addM");if(am)am.onsubmit=async e=>{e.preventDefault();const{error}=await sb.from("members").insert({email:$("nm").value.trim().toLowerCase(),role:"chef"});toast(error?"Couldn't add: "+error.message:"Added");moreSheet();};
-  document.querySelectorAll("[data-rm]").forEach(b=>b.onclick=async()=>{const{error}=await sb.from("members").delete().eq("email",b.dataset.rm);toast(error?"Couldn't remove":"Removed");moreSheet();});
+  const invite=async(email,role)=>{const{data:code,error}=await sb.rpc("invite_member",{p_email:email,p_role:role||"chef"});
+    if(error)return toast("Couldn't add: "+error.message);await moreSheet();
+    const msg=`You're invited to Kitchen Pass, the kitchen team's recipe and residence app.\n\n1. Open ${SITE}\n2. Tap "First time? I have an invite code"\n3. Email: ${email}\n   Invite code: ${code}\n4. Choose a password.\n\nOn iPhone: Share > Add to Home Screen. On Android: menu > Add to Home screen.`;
+    $("invOut").innerHTML=`<div class="note">Invite code for ${esc(email)}: <b>${esc(code)}</b></div><div class="acts"><button class="kbtn pri" id="cpInv">Copy invite message</button></div>`;
+    $("cpInv").onclick=()=>copy(msg);};
+  const am=$("addM");if(am)am.onsubmit=async e=>{e.preventDefault();invite($("nm").value.trim().toLowerCase(),"chef");};
+  document.querySelectorAll("[data-reset]").forEach(b=>b.onclick=()=>invite(b.dataset.reset,b.dataset.role));
+  document.querySelectorAll("[data-rm]").forEach(b=>b.onclick=async()=>{if(b.textContent!=="Sure?"){b.textContent="Sure?";return;}const{error}=await sb.rpc("remove_member",{p_email:b.dataset.rm});toast(error?"Couldn't remove":"Removed");moreSheet();});
   const imp=$("imp");if(imp)imp.onchange=async()=>{
     try{const j=JSON.parse(await imp.files[0].text());const rows=[];
       for(const col of COLS)for(const[id,d]of Object.entries(j[col]||{}))rows.push({id:col+"/"+id,collection:col,data:d,deleted:false});
@@ -331,7 +352,7 @@ route();
   const{data}=await sb.auth.getSession();
   if(data&&data.session)start(data.session);
   else if(!navigator.onLine&&await idb.get("user")){S.user={email:await idb.get("user")};S.role=await idb.get("role");S.ready=!!S.role;render();}
-  else authScreen("email");
+  else authScreen("in");
 })();
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 }

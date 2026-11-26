@@ -93,3 +93,4 @@ html,body{margin:0}body{background:var(--k-bg,#f2f1ec)}
 #root .err{color:var(--k-danger);font-weight:600}
 #root .mrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--k-hair)}
 [hidden]{display:none!important}
+#root .auth a{color:var(--k-accent);font-weight:600}
