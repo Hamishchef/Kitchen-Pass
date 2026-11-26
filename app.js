@@ -1,7 +1,7 @@
 {
 const kpEl=document.createElement("div");kpEl.id="kp";
 kpEl.innerHTML=`<header><div class="wrap">
-  <div class="top"><h1>Kitchen <b>Pass</b></h1><span class="sub"><span class="dot off" id="dot"></span><span id="sub">Loading\u2026</span><button class="more" id="moreBtn" type="button">More</button></span></div>
+  <div class="top"><h1 class="wm" aria-label="Pass">PASS</h1><span class="sub"><span class="dot off" id="dot"></span><span id="sub">Loading\u2026</span><button class="more" id="moreBtn" type="button">More</button></span></div>
   <div class="ksearch"><input id="q" type="search" placeholder="Search recipes" aria-label="Search"><button class="add" id="addBtn" hidden>+ Add</button></div>
 </div></header>
 <div class="wrap"><div class="kmain" id="view"></div></div>
@@ -278,10 +278,10 @@ const SITE=location.origin+location.pathname;
 function authScreen(step,msg){
   $("kp").hidden=true;let a=$("auth");if(!a){a=document.createElement("div");a.id="auth";a.className="auth";$("root").appendChild(a);}a.hidden=false;
   const tab=step==="join"?"join":step==="claim"?"claim":"in";
-  a.innerHTML=!sb?`<h2>Kitchen Pass</h2><p>This copy isn't connected to its database yet.</p>`
+  a.innerHTML=!sb?`<h2 class="wm">PASS</h2><p>This copy isn't connected to its database yet.</p>`
    :tab==="claim"?`<h2>Enter your invite code</h2><p>You're signed in, but your account isn't linked to the team yet. Enter the 6-letter code Hamish sent you.</p><form id="claimF"><label for="cc">Invite code</label><input id="cc" autocapitalize="characters" autocomplete="off" required><button class="kbtn pri">Join the team</button></form><p class="err">${esc(msg||"")}</p><p><a href="#" data-auth="out">Sign out</a></p>`
    :tab==="join"?`<h2>First time here</h2><p>Use the email and invite code Hamish sent you, and choose a password.</p><form id="joinF"><label for="je">Email</label><input id="je" type="email" autocomplete="email" required><label for="jc">Invite code</label><input id="jc" autocapitalize="characters" autocomplete="off" required><label for="jp">Choose a password (8+ characters)</label><input id="jp" type="password" autocomplete="new-password" minlength="8" required><button class="kbtn pri">Create my account</button></form><p class="err">${esc(msg||"")}</p><p><a href="#" data-auth="in">I already have a password</a></p>`
-   :`<h2>Kitchen Pass</h2><p>Recipes, residences and family preferences for the kitchen team.</p><form id="inF"><label for="ie">Email</label><input id="ie" type="email" autocomplete="email" required><label for="ip">Password</label><input id="ip" type="password" autocomplete="current-password" required><button class="kbtn pri">Sign in</button></form><p class="err">${esc(msg||"")}</p><p><a href="#" data-auth="join">First time? I have an invite code</a></p><p class="kmeta">Forgotten your password? Ask Hamish for a new invite code.</p>`;
+   :`<h2 class="wm">PASS</h2><p>Recipes, residences and family preferences for the kitchen team.</p><form id="inF"><label for="ie">Email</label><input id="ie" type="email" autocomplete="email" required><label for="ip">Password</label><input id="ip" type="password" autocomplete="current-password" required><button class="kbtn pri">Sign in</button></form><p class="err">${esc(msg||"")}</p><p><a href="#" data-auth="join">First time? I have an invite code</a></p><p class="kmeta">Forgotten your password? Ask Hamish for a new invite code.</p>`;
   a.querySelectorAll("[data-auth]").forEach(l=>l.onclick=async e=>{e.preventDefault();if(l.dataset.auth==="out"){await sb.auth.signOut();authScreen("in");}else authScreen(l.dataset.auth);});
   const busy=f=>{const b=f.querySelector("button");b.disabled=true;b.textContent="Please wait\u2026";};
   const inF=$("inF"),joinF=$("joinF"),claimF=$("claimF");
@@ -316,12 +316,12 @@ async function moreSheet(){
      <div id="invOut"></div>
      <form id="addM"><label for="nm">Add a chef by email</label><input id="nm" type="email" required><div class="acts"><button class="kbtn pri">Add and get invite code</button></div></form></div>
      <div class="blk"><h4>Import from the Recipe Book</h4><p class="kmeta">Choose the file from "Export everything" on the old page. Existing items with the same id are replaced.</p><input type="file" id="imp" accept="application/json,.json"></div>`;}
-  sheet(`<h2 id="sheetT">Kitchen Pass</h2><p class="kmeta">Signed in as ${esc(S.user?.email||"")}${S.role?" \u00b7 "+esc(S.role):""}</p>
+  sheet(`<h2 id="sheetT">PASS</h2><p class="kmeta">Signed in as ${esc(S.user?.email||"")}${S.role?" \u00b7 "+esc(S.role):""}</p>
    <p>${navigator.onLine?(syncErr?esc(syncErr):"Online. "+(lastSync?"Last synced "+lastSync.toLocaleTimeString():"")):"Offline. Changes are saved on this phone and sync when you're back online."}</p>
    <div class="acts"><button class="kbtn" data-act="syncnow">Sync now</button><button class="kbtn del" data-act="signout">Sign out</button></div>${team}`);
   const invite=async(email,role)=>{const{data:code,error}=await sb.rpc("invite_member",{p_email:email,p_role:role||"chef"});
     if(error)return toast("Couldn't add: "+error.message);await moreSheet();
-    const msg=`You're invited to Kitchen Pass, the kitchen team's recipe and residence app.\n\n1. Open ${SITE}\n2. Tap "First time? I have an invite code"\n3. Email: ${email}\n   Invite code: ${code}\n4. Choose a password.\n\nOn iPhone: Share > Add to Home Screen. On Android: menu > Add to Home screen.`;
+    const msg=`You're invited to PASS, the kitchen team's recipe and residence app.\n\n1. Open ${SITE}\n2. Tap "First time? I have an invite code"\n3. Email: ${email}\n   Invite code: ${code}\n4. Choose a password.\n\nOn iPhone: Share > Add to Home Screen. On Android: menu > Add to Home screen.`;
     $("invOut").innerHTML=`<div class="note">Invite code for ${esc(email)}: <b>${esc(code)}</b></div><div class="acts"><button class="kbtn pri" id="cpInv">Copy invite message</button></div>`;
     $("cpInv").onclick=()=>copy(msg);};
   const am=$("addM");if(am)am.onsubmit=async e=>{e.preventDefault();invite($("nm").value.trim().toLowerCase(),"chef");};

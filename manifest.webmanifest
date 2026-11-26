@@ -1,6 +1,6 @@
 {
-  "name": "Kitchen Pass",
-  "short_name": "Kitchen Pass",
+  "name": "PASS",
+  "short_name": "PASS",
   "description": "Recipes, residences and family preferences for the kitchen team.",
   "start_url": "./",
   "scope": "./",

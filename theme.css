@@ -71,3 +71,8 @@ body{background:var(--k-bg,#f6f1e7)}
 #root .auth h2{font:600 40px/1.05 var(--k-display);letter-spacing:.03em;border-bottom:1px solid var(--k-gilt);padding-bottom:12px}
 #root .auth a{color:var(--k-ink);text-decoration-color:var(--k-gilt)}
 #root .auth .kbtn.pri{border-radius:24px;height:48px}
+
+/* PASS wordmark: ivory capitals extruded in gilt, hand-cut feel */
+#root .wm{font:700 34px/1 var(--k-display);letter-spacing:.14em;color:#f6f1e7;margin:0;
+ text-shadow:1px 1px 0 #c9ad6e,2px 2px 0 #b99c5c,3px 3px 0 #a88a4b,4px 4px 0 #957a3f,5px 5px 0 #826a35,7px 7px 10px rgba(0,0,0,.35)}
+#root .auth .wm{font-size:64px;color:#14213d;border-bottom:0;padding-bottom:4px;margin-bottom:10px}
