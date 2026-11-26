@@ -290,7 +290,7 @@ function authScreen(step,msg){
   if(joinF)joinF.onsubmit=async e=>{e.preventDefault();busy(joinF);const email=$("je").value.trim().toLowerCase(),password=$("jp").value,code=$("jc").value;
     let{data,error}=await sb.auth.signUp({email,password});
     if(error&&/already/i.test(error.message)){({data,error}=await sb.auth.signInWithPassword({email,password}));}
-    if(error)return authScreen("join",error.message);
+    if(error)return authScreen("join",/signups not allowed/i.test(error.message)?"New accounts are switched off. In Supabase, turn on 'Allow new users to sign up'.":error.message);
     if(!data.session)return authScreen("join","Account created but not signed in. Ask Hamish to switch off 'Confirm email' in Supabase.");
     const{data:role,error:ce}=await sb.rpc("claim_invite",{code});
     if(ce||!role){await sb.auth.signOut();return authScreen("join","That invite code doesn't match this email, or has already been used.");}
