@@ -14,6 +14,7 @@ kpEl.innerHTML=`<header><div class="wrap">
   <div class="grab"><span></span><button type="button" id="closeBtn">Close</button></div><div id="sheetBody"></div>
 </div></div>`;
 document.getElementById("root").appendChild(kpEl);
+{const hd=kpEl.querySelector("header"),fit=()=>kpEl.style.setProperty("--hdr",hd.offsetHeight+"px");new ResizeObserver(fit).observe(hd);fit();}
 
 const $=s=>document.getElementById(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
