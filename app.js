@@ -24,7 +24,7 @@ const monthOf=s=>{const d=new Date((s||"")+"T12:00:00");return isNaN(d)?"No date
 const dbl=v=>{const s=String(v??"").trim().replace(",",".");return s===""||isNaN(+s)?"":String(Math.round(+s*2000)/1000);};
 const lines=s=>String(s||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
 const COLS=["recipes","menus","contacts","orders","residences","people"];
-const FOLDERS=["Meat & Poultry","Fish & Seafood","Vegetarian & Vegan","Soups & Salads","Pasta, Grains & Breads","Breakfast & Brunch","Baking & Patisserie","Desserts","Ice Creams","Sauces, Stocks & Dressings","Kitchen Guidelines"];
+const FOLDERS=["Meat & Poultry","Fish & Seafood","Vegetarian & Vegan","Soups & Salads","Pasta, Grains & Breads","Breakfast & Brunch","Baking & Patisserie","Desserts","Ice Creams","Stocks & Sauces","Pickles & Preserves"];
 const fOrder=f=>{const i=FOLDERS.indexOf(f);return i<0?99:i;};
 const SUBS={menus:"Menus",contacts:"Phone",orders:"Orders"};
 const PH={recipes:"Search recipes or ingredients",residences:"Search residences and yachts",people:"Search names, allergies, likes",menus:"Search dishes and notes",contacts:"Search names and numbers",orders:"Search suppliers, restaurants, items"};
