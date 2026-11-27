@@ -1,5 +1,5 @@
 // Offline cache for the app shell. Bump VERSION on every release.
-const VERSION = "kp-10";
+const VERSION = "kp-11";
 const SHELL = ["./", "index.html", "app.css", "theme.css", "wordmark.svg", "fonts/cormorant-garamond-latin-500-normal.woff2", "fonts/cormorant-garamond-latin-600-normal.woff2", "fonts/cormorant-garamond-latin-700-normal.woff2", "fonts/nunito-sans-latin-400-normal.woff2", "fonts/nunito-sans-latin-600-normal.woff2", "fonts/nunito-sans-latin-700-normal.woff2", "app.js", "config.js", "vendor/supabase.js",
   "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });

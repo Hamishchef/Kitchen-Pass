@@ -24,6 +24,8 @@ const monthOf=s=>{const d=new Date((s||"")+"T12:00:00");return isNaN(d)?"No date
 const dbl=v=>{const s=String(v??"").trim().replace(",",".");return s===""||isNaN(+s)?"":String(Math.round(+s*2000)/1000);};
 const lines=s=>String(s||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
 const COLS=["recipes","menus","contacts","orders","residences","people"];
+const FOLDERS=["Meat & Poultry","Fish & Seafood","Vegetarian & Vegan","Soups & Salads","Pasta, Grains & Breads","Breakfast & Brunch","Baking & Patisserie","Desserts","Ice Creams","Sauces, Stocks & Dressings","Kitchen Guidelines"];
+const fOrder=f=>{const i=FOLDERS.indexOf(f);return i<0?99:i;};
 const SUBS={menus:"Menus",contacts:"Phone",orders:"Orders"};
 const PH={recipes:"Search recipes or ingredients",residences:"Search residences and yachts",people:"Search names, allergies, likes",menus:"Search dishes and notes",contacts:"Search names and numbers",orders:"Search suppliers, restaurants, items"};
 const S={db:null,data:{recipes:{},menus:{},contacts:{},orders:{},residences:{},people:{}},view:"recipes",res:null,sub:"menus",q:"",otype:"supplier",write:true,loaded:false,open:null};
@@ -31,7 +33,7 @@ const FORMS={
  menus:[{k:"date",l:"Date",t:"date"},{k:"location",l:"Residence or yacht",list:"locs"},{k:"meal",l:"Meal",opts:["Breakfast","Lunch","Dinner","Event"]},{k:"guests",l:"Guests"},{k:"courses",l:"Dishes, one per line (a recipe name links to the card)",t:"area"},{k:"notes",l:"Notes (allergies, feedback, what to change)",t:"area"}],
  contacts:[{k:"name",l:"Name"},{k:"category",l:"Category",opts:["Supplier","Restaurant","Household","Maintenance","Emergency","Other"]},{k:"phone",l:"Phone",t:"tel"},{k:"alt",l:"Second number",t:"tel"},{k:"email",l:"Email",t:"email"},{k:"location",l:"Residence or yacht (blank shows it everywhere)",list:"locs"},{k:"notes",l:"Notes (account number, order cut-off, usual order)",t:"area"}],
  orders:[{k:"type",l:"Type",opts:["supplier","restaurant"],lab:["Supplier order","Restaurant takeaway"]},{k:"vendor",l:"Supplier or restaurant",list:"vendors"},{k:"location",l:"Residence or yacht",list:"locs"},{k:"date",l:"For date",t:"date"},{k:"status",l:"Status",opts:["Draft","Sent","Delivered"]},{k:"items",l:"Items, one per line",t:"area"},{k:"notes",l:"Notes",t:"area"}],
- recipes:[{k:"title",l:"Recipe title"},{k:"section",l:"Section",list:"sections"},{k:"kitchen",l:"Kitchen"},{k:"yieldSingle",l:"Yield (single)"},{k:"yieldDouble",l:"Yield (double, blank = single x 2)"},{k:"cooking",l:"Cooking / \u00b0C"},{k:"ing",l:"Ingredients, one per line: single | ingredient | double. A line in CAPITALS on its own is a heading.",t:"area",big:1},{k:"method",l:"Method",t:"area",big:1},{k:"notes",l:"Important notes",t:"area"}],
+ recipes:[{k:"title",l:"Recipe title"},{k:"section",l:"Folder",list:"sections"},{k:"kitchen",l:"Kitchen"},{k:"yieldSingle",l:"Yield (single)"},{k:"yieldDouble",l:"Yield (double, blank = single x 2)"},{k:"cooking",l:"Cooking / \u00b0C"},{k:"ing",l:"Ingredients, one per line: single | ingredient | double. A line in CAPITALS on its own is a heading.",t:"area",big:1},{k:"method",l:"Method",t:"area",big:1},{k:"notes",l:"Important notes",t:"area"}],
  people:[{k:"name",l:"Name"},{k:"group",l:"Group",opts:["Family","Guest","Staff"]},{k:"allergies",l:"Allergies (shown in red everywhere)",t:"area"},{k:"dietary",l:"Dietary requirements (e.g. vegetarian, no pork, low sugar)",t:"area"},{k:"likes",l:"Likes and favourite dishes",t:"area"},{k:"dislikes",l:"Dislikes",t:"area"},{k:"notes",l:"Other notes (portion size, drinks, how they take coffee)",t:"area"}],
  residences:[{k:"name",l:"Name"},{k:"kind",l:"Type",opts:["Residence","Yacht"]},{k:"place",l:"Town or home port"},{k:"order",l:"Position in list (1 = top)",t:"number"},{k:"notes",l:"Notes (address, gate codes kept elsewhere, kitchen kit)",t:"area"}]};
 
@@ -48,17 +50,25 @@ const telLink=p=>`<a class="tel" href="tel:${esc(String(p).replace(/[^\d+]/g,"")
 
 /* ---------- views ---------- */
 function renderRecipes(){
-  const q=S.q.trim().toLowerCase(),g={};
-  for(const[id,r]of Object.entries(S.data.recipes)){
-    if(!r.title)continue;
-    if(q&&!(has(r,["title","section","dish","kitchen"])||(r.ingredients||[]).some(i=>(i.name||"").toLowerCase().includes(q))))continue;
-    const s=(r.section||"").trim()||"Other";(g[s]=g[s]||[]).push([id,r]);
+  const q=S.q.trim().toLowerCase(),g={},all=Object.entries(S.data.recipes).filter(([,r])=>r.title);
+  const card=([id,r])=>{const ing=(r.ingredients||[]).filter(i=>i.name&&(i.single||i.double)).map(i=>i.name.replace(/\s*\(.*?\)/g,"")).slice(0,4).join(", ");
+    return `<button class="tk" data-o="recipes:${esc(id)}"><h3>${esc(r.title)}</h3><p>${esc(ing||r.cooking||"")}</p></button>`;};
+  const fold=r=>(r.section||"").trim()||"Other";
+  if(!all.length)return empty("No recipes yet","Recipes added here will show for every chef.");
+  if(!q&&!S.folder){
+    for(const e of all)(g[fold(e[1])]=g[fold(e[1])]||[]).push(e);
+    const names=Object.keys(g).sort((a,b)=>fOrder(a)-fOrder(b)||a.localeCompare(b));
+    return `<div class="gh"><span>Recipe folders</span><span>${all.length} recipes</span></div><div class="folders">`+names.map(f=>`<a class="fold" href="#f-${encodeURIComponent(f)}"><b>${esc(f)}</b><small>${g[f].length} recipe${g[f].length===1?"":"s"}</small></a>`).join("")+`</div>`;
   }
-  const names=Object.keys(g).sort();
-  if(!names.length)return empty(Object.keys(S.data.recipes).length?"Nothing matches":"No recipes yet",Object.keys(S.data.recipes).length?"Try an ingredient, like \u201cshallot\u201d.":"Recipes added here will show for every chef.");
-  return names.map(s=>`<div class="gh"><span>${esc(s)}</span><span>${g[s].length}</span></div>`+g[s].sort((a,b)=>a[1].title.localeCompare(b[1].title)).map(([id,r])=>{
-    const ing=(r.ingredients||[]).filter(i=>i.name&&(i.single||i.double)).map(i=>i.name.replace(/\s*\(.*?\)/g,"")).slice(0,4).join(", ");
-    return `<button class="tk" data-o="recipes:${esc(id)}"><h3>${esc(r.title)}</h3><p>${esc(ing||r.cooking||"")}</p></button>`;}).join("")).join("");
+  for(const[id,r]of all){
+    if(S.folder&&fold(r)!==S.folder)continue;
+    if(q&&!(has(r,["title","section","dish","kitchen"])||(r.ingredients||[]).some(i=>(i.name||"").toLowerCase().includes(q))))continue;
+    (g[fold(r)]=g[fold(r)]||[]).push([id,r]);
+  }
+  const back=S.folder?`<a class="back" href="#recipes">\u2039 All folders</a>`:"";
+  const names=Object.keys(g).sort((a,b)=>fOrder(a)-fOrder(b)||a.localeCompare(b));
+  if(!names.length)return back+empty("Nothing matches","Try an ingredient, like \u201cshallot\u201d.");
+  return back+names.map(f=>`<div class="gh"><span>${esc(f)}</span><span>${g[f].length}</span></div>`+g[f].sort((a,b)=>a[1].title.localeCompare(b[1].title)).map(card).join("")).join("");
 }
 function renderResidences(){
   const all=resList().filter(([,r])=>has(r,["name","place","kind"]));
@@ -181,7 +191,7 @@ function form(col,id,seed){
     return `<label for="kf_${f.k}">${f.l}</label><input id="kf_${f.k}" data-k="${f.k}" type="${f.t||"text"}" value="${esc(v)}" ${f.list?`list="dl_${f.list}"`:""} ${f.k==="name"||f.k==="vendor"?"required":""}>`;};
   const title={menus:"menu",contacts:"number",orders:"order",residences:"residence or yacht",people:"person",recipes:"recipe"}[col];
   sheet(`<h2 id="sheetT">${id?"Edit":"New"} ${title}</h2><form id="frm" data-col="${col}" data-id="${esc(id||"")}">${FORMS[col].map(field).join("")}
-    <datalist id="dl_locs">${locs().map(l=>`<option value="${esc(l)}">`).join("")}</datalist><datalist id="dl_sections">${[...new Set(Object.values(S.data.recipes).map(r=>r.section).filter(Boolean))].sort().map(l=>`<option value="${esc(l)}">`).join("")}</datalist><datalist id="dl_vendors">${vendors.map(l=>`<option value="${esc(l)}">`).join("")}</datalist>
+    <datalist id="dl_locs">${locs().map(l=>`<option value="${esc(l)}">`).join("")}</datalist><datalist id="dl_sections">${[...new Set([...FOLDERS,...Object.values(S.data.recipes).map(r=>r.section).filter(Boolean)])].map(l=>`<option value="${esc(l)}">`).join("")}</datalist><datalist id="dl_vendors">${vendors.map(l=>`<option value="${esc(l)}">`).join("")}</datalist>
     <div class="acts"><button class="kbtn pri" type="submit">Save</button>${id?`<span id="delW"><button class="kbtn del" type="button" data-act="del">Delete</button></span>`:""}</div></form>`);
 }
 async function save(e){
@@ -221,13 +231,13 @@ document.addEventListener("submit",e=>{if(e.target.id==="frm")save(e);});
 $("closeBtn").onclick=closeSheet;
 $("sheet").addEventListener("click",e=>{if(e.target.id==="sheet")closeSheet();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("sheet").hidden)closeSheet();});
-$("addBtn").onclick=()=>{if(S.view==="recipes")form("recipes",null);else if(S.view==="residences")form("residences",null);else if(S.view==="people")form("people",null);else form(S.sub,null);};
+$("addBtn").onclick=()=>{if(S.view==="recipes")form("recipes",null,S.folder?{section:S.folder}:undefined);else if(S.view==="residences")form("residences",null);else if(S.view==="people")form("people",null);else form(S.sub,null);};
 let qt;$("q").addEventListener("input",e=>{clearTimeout(qt);qt=setTimeout(()=>{S.q=e.target.value;render();},120);});
 function route(){
   const h=location.hash.slice(1);
   let v="recipes",res=null;
-  if(h==="residences")v="residences";else if(h==="preferences")v="people";else if(h.startsWith("r-")){v="res";res=h.slice(2);}
-  if(v!==S.view||res!==S.res){S.view=v;S.res=res;S.q="";$("q").value="";closeSheet();window.scrollTo(0,0);}
+  S.folder=h.startsWith("f-")?decodeURIComponent(h.slice(2)):null;if(h==="residences")v="residences";else if(h==="preferences")v="people";else if(h.startsWith("r-")){v="res";res=h.slice(2);}
+  if(v!==S.view||res!==S.res||S.folder!==S.lastFolder){S.lastFolder=S.folder;S.view=v;S.res=res;S.q="";$("q").value="";closeSheet();window.scrollTo(0,0);}
   render();
 }
 window.addEventListener("hashchange",route);
