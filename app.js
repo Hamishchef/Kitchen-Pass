@@ -25,6 +25,13 @@ const dbl=v=>{const s=String(v??"").trim().replace(",",".");return s===""||isNaN
 const lines=s=>String(s||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
 const COLS=["recipes","menus","contacts","orders","residences","people"];
 const FOLDERS=["Meat & Poultry","Fish & Seafood","Vegetarian & Vegan","Soups & Salads","Pasta, Grains & Breads","Breakfast & Brunch","Baking & Patisserie","Desserts","Ice Creams","Stocks & Sauces","Pickles & Preserves"];
+const lsk=k=>"kp_"+k+"_"+((S.user&&S.user.email)||"me");
+const lsGet=k=>{try{return JSON.parse(localStorage.getItem(lsk(k))||"[]");}catch(e){return [];}};
+const lsSet=(k,v)=>{try{localStorage.setItem(lsk(k),JSON.stringify(v));}catch(e){}};
+const isFav=id=>lsGet("fav").includes(id);
+const toggleFav=id=>{const f=lsGet("fav");lsSet("fav",f.includes(id)?f.filter(x=>x!==id):[id,...f]);};
+const addRecent=id=>lsSet("recent",[id,...lsGet("recent").filter(x=>x!==id)].slice(0,8));
+const REVIEW="__review",FAVS="__favs";
 const fOrder=f=>{const i=FOLDERS.indexOf(f);return i<0?99:i;};
 const SUBS={menus:"Menus",contacts:"Phone",orders:"Orders"};
 const PH={recipes:"Search recipes or ingredients",residences:"Search residences and yachts",people:"Search names, allergies, likes",menus:"Search dishes and notes",contacts:"Search names and numbers",orders:"Search suppliers, restaurants, items"};
@@ -33,7 +40,7 @@ const FORMS={
  menus:[{k:"date",l:"Date",t:"date"},{k:"location",l:"Residence or yacht",list:"locs"},{k:"meal",l:"Meal",opts:["Breakfast","Lunch","Dinner","Event"]},{k:"guests",l:"Guests"},{k:"courses",l:"Dishes, one per line (a recipe name links to the card)",t:"area"},{k:"notes",l:"Notes (allergies, feedback, what to change)",t:"area"}],
  contacts:[{k:"name",l:"Name"},{k:"category",l:"Category",opts:["Supplier","Restaurant","Household","Maintenance","Emergency","Other"]},{k:"phone",l:"Phone",t:"tel"},{k:"alt",l:"Second number",t:"tel"},{k:"email",l:"Email",t:"email"},{k:"location",l:"Residence or yacht (blank shows it everywhere)",list:"locs"},{k:"notes",l:"Notes (account number, order cut-off, usual order)",t:"area"}],
  orders:[{k:"type",l:"Type",opts:["supplier","restaurant"],lab:["Supplier order","Restaurant takeaway"]},{k:"vendor",l:"Supplier or restaurant",list:"vendors"},{k:"location",l:"Residence or yacht",list:"locs"},{k:"date",l:"For date",t:"date"},{k:"status",l:"Status",opts:["Draft","Sent","Delivered"]},{k:"items",l:"Items, one per line",t:"area"},{k:"notes",l:"Notes",t:"area"}],
- recipes:[{k:"title",l:"Recipe title"},{k:"section",l:"Folder",list:"sections"},{k:"kitchen",l:"Kitchen"},{k:"yieldSingle",l:"Yield (single)"},{k:"yieldDouble",l:"Yield (double, blank = single x 2)"},{k:"cooking",l:"Cooking / \u00b0C"},{k:"ing",l:"Ingredients, one per line: single | ingredient | double. A line in CAPITALS on its own is a heading.",t:"area",big:1},{k:"method",l:"Method",t:"area",big:1},{k:"notes",l:"Important notes",t:"area"}],
+ recipes:[{k:"title",l:"Recipe title"},{k:"section",l:"Folder",list:"sections"},{k:"kitchen",l:"Kitchen"},{k:"yieldSingle",l:"Yield (single)"},{k:"yieldDouble",l:"Yield (double, blank = single x 2)"},{k:"cooking",l:"Cooking / \u00b0C"},{k:"ing",l:"Ingredients, one per line: single | ingredient | double. A line in CAPITALS on its own is a heading.",t:"area",big:1},{k:"method",l:"Method",t:"area",big:1},{k:"notes",l:"Important notes",t:"area"},{k:"review",l:"Needs review: notes for Hamish. Clear this box once fixed.",t:"area"}],
  people:[{k:"name",l:"Name"},{k:"group",l:"Group",opts:["Family","Guest","Staff"]},{k:"allergies",l:"Allergies (shown in red everywhere)",t:"area"},{k:"dietary",l:"Dietary requirements (e.g. vegetarian, no pork, low sugar)",t:"area"},{k:"likes",l:"Likes and favourite dishes",t:"area"},{k:"dislikes",l:"Dislikes",t:"area"},{k:"notes",l:"Other notes (portion size, drinks, how they take coffee)",t:"area"}],
  residences:[{k:"name",l:"Name"},{k:"kind",l:"Type",opts:["Residence","Yacht"]},{k:"place",l:"Town or home port"},{k:"order",l:"Position in list (1 = top)",t:"number"},{k:"notes",l:"Notes (address, gate codes kept elsewhere, kitchen kit)",t:"area"}]};
 
@@ -52,16 +59,23 @@ const telLink=p=>`<a class="tel" href="tel:${esc(String(p).replace(/[^\d+]/g,"")
 function renderRecipes(){
   const q=S.q.trim().toLowerCase(),g={},all=Object.entries(S.data.recipes).filter(([,r])=>r.title);
   const card=([id,r])=>{const ing=(r.ingredients||[]).filter(i=>i.name&&(i.single||i.double)).map(i=>i.name.replace(/\s*\(.*?\)/g,"")).slice(0,4).join(", ");
-    return `<button class="tk" data-o="recipes:${esc(id)}"><h3>${esc(r.title)}</h3><p>${esc(ing||r.cooking||"")}</p></button>`;};
+    return `<button class="tk" data-o="recipes:${esc(id)}"><h3>${isFav(id)?"\u2605 ":""}${esc(r.title)}${r.review&&S.role==="admin"?` <span class="flag">Check</span>`:""}</h3><p>${esc(S.folder===REVIEW&&r.review?r.review:(ing||r.cooking||""))}</p></button>`;};
   const fold=r=>(r.section||"").trim()||"Other";
   if(!all.length)return empty("No recipes yet","Recipes added here will show for every chef.");
   if(!q&&!S.folder){
     for(const e of all)(g[fold(e[1])]=g[fold(e[1])]||[]).push(e);
     const names=Object.keys(g).sort((a,b)=>fOrder(a)-fOrder(b)||a.localeCompare(b));
-    return `<div class="gh"><span>Recipe folders</span><span>${all.length} recipes</span></div><div class="folders">`+names.map(f=>`<a class="fold" href="#f-${encodeURIComponent(f)}"><b>${esc(f)}</b><small>${g[f].length} recipe${g[f].length===1?"":"s"}</small></a>`).join("")+`</div>`;
+    const pick=ids=>ids.map(id=>[id,S.data.recipes[id]]).filter(([,r])=>r&&r.title);
+    const favs=pick(lsGet("fav")),rec=pick(lsGet("recent")).slice(0,5),nrev=all.filter(([,r])=>r.review).length;
+    const chips=l=>`<div class="chips">${l.map(([id,r])=>`<button class="chip" data-o="recipes:${esc(id)}">${esc(r.title)}</button>`).join("")}</div>`;
+    return (favs.length?`<div class="gh"><span>\u2605 Favourites</span><a class="ghl" href="#f-${FAVS}">See all ${favs.length}</a></div>`+chips(favs.slice(0,6)):"")
+      +(rec.length?`<div class="gh"><span>Recently viewed</span><span></span></div>`+chips(rec):"")
+      +`<div class="gh"><span>Recipe folders</span><span>${all.length} recipes</span></div><div class="folders">`+names.map(f=>`<a class="fold" href="#f-${encodeURIComponent(f)}"><b>${esc(f)}</b><small>${g[f].length} recipe${g[f].length===1?"":"s"}</small></a>`).join("")
+      +(S.role==="admin"&&nrev?`<a class="fold rev" href="#f-${REVIEW}"><b>Needs review</b><small>${nrev} recipe${nrev===1?"":"s"} flagged</small></a>`:"")+`</div>`;
   }
+  const favSet=new Set(lsGet("fav"));
   for(const[id,r]of all){
-    if(S.folder&&fold(r)!==S.folder)continue;
+    if(S.folder===REVIEW){if(!r.review)continue;}else if(S.folder===FAVS){if(!favSet.has(id))continue;}else if(S.folder&&fold(r)!==S.folder)continue;
     if(q&&!(has(r,["title","section","dish","kitchen"])||(r.ingredients||[]).some(i=>(i.name||"").toLowerCase().includes(q))))continue;
     (g[fold(r)]=g[fold(r)]||[]).push([id,r]);
   }
@@ -143,12 +157,17 @@ function openItem(key,refresh){
     const isH=x=>!String(x.single||"").trim()&&!String(x.double||"").trim()&&/[A-Z]/.test(x.name||"")&&x.name===x.name.toUpperCase();
     const amt=x=>mult===2?(x.double||dbl(x.single)||x.single||""):(x.single||"");
     const y=mult===2?(o.yieldDouble||dbl(o.yieldSingle)):o.yieldSingle;
-    sheet(`<h2 id="sheetT">${esc(o.title)}</h2><p class="kmeta">${esc([o.section,o.kitchen&&("Kitchen "+o.kitchen),y&&("Yield "+y)].filter(Boolean).join(" \u00b7 "))}</p>
+    if(!refresh)addRecent(id);
+    const ph=o.photos||[];
+    sheet(`<div class="shd"><h2 id="sheetT">${esc(o.title)}</h2><button class="fav${isFav(id)?" on":""}" data-act="fav" aria-label="${isFav(id)?"Remove from favourites":"Add to favourites"}">${isFav(id)?"\u2605":"\u2606"}</button></div>
+     ${o.review&&S.role==="admin"?`<div class="review"><b>Needs review</b><ul>${o.review.split("; ").map(x=>`<li>${esc(x)}</li>`).join("")}</ul><small>Fix the recipe with Edit card, then clear the \u201cNeeds review\u201d box.</small></div>`:""}<p class="kmeta">${esc([o.section,o.kitchen&&("Kitchen "+o.kitchen),y&&("Yield "+y)].filter(Boolean).join(" \u00b7 "))}</p>
      <div class="seg"><button data-m="1" class="${mult===1?"on":""}">Single</button><button data-m="2" class="${mult===2?"on":""}">Double</button></div>
      ${ings.length?`<table class="king"><tbody>${ings.map(x=>isH(x)?`<tr class="h"><td colspan="2">${esc(x.name)}</td></tr>`:`<tr><td class="q">${esc(amt(x))}</td><td>${esc(x.name)}</td></tr>`).join("")}</tbody></table>`:""}
      ${o.cooking?`<div class="blk"><h4>Cooking / \u00b0C</h4><div class="txt">${esc(o.cooking)}</div></div>`:""}
      ${o.method?`<div class="blk"><h4>Method</h4><div class="txt">${esc(o.method)}</div></div>`:""}
      ${o.notes?`<div class="blk"><h4>Important notes</h4><div class="note">${esc(o.notes)}</div></div>`:""}
+     ${ph.length||S.write?`<div class="blk"><h4>Photos &amp; steps</h4>${ph.map((p,n)=>`<figure class="ph"><img src="${esc(p.url)}" alt="${esc(p.caption||o.title)}" loading="lazy">${p.caption?`<figcaption>${n+1}. ${esc(p.caption)}</figcaption>`:""}${S.write?`<span id="phd${n}"><button class="kbtn del sm" data-act="phdel" data-n="${n}">Remove</button></span>`:""}</figure>`).join("")}
+       ${S.write?`<div id="phAdd"><button class="kbtn" data-act="phnew">+ Add photo</button></div>`:""}</div>`:""}
      ${S.write?`<div class="acts"><button class="kbtn" data-act="rbedit">Edit card</button></div>`:""}`);
   }else if(col==="menus"){
     const map=recipeByTitle();
@@ -195,8 +214,8 @@ function form(col,id,seed){
     <div class="acts"><button class="kbtn pri" type="submit">Save</button>${id?`<span id="delW"><button class="kbtn del" type="button" data-act="del">Delete</button></span>`:""}</div></form>`);
 }
 async function save(e){
-  e.preventDefault();const f=e.target,col=f.dataset.col;let id=f.dataset.id;const d={};
-  f.querySelectorAll("[data-k]").forEach(x=>d[x.dataset.k]=x.value.trim());d.savedAt=Date.now();
+  e.preventDefault();const f=e.target,col=f.dataset.col;let id=f.dataset.id;const d={...((id&&S.data[col][id])||{})};
+  f.querySelectorAll("[data-k]").forEach(x=>d[x.dataset.k]=x.value.trim());if(col==="recipes"&&!d.review)delete d.review;d.savedAt=Date.now();
   if(col==="recipes"){d.ingredients=lines(d.ing).map(l=>{const p=l.split("|").map(x=>x.trim());return p.length===1?{single:"",name:p[0],double:""}:{single:p[0],name:p[1]||"",double:p[2]||""};});delete d.ing;d.titleLower=(d.title||"").toLowerCase();d.updated=today();}
   const rid=id||newId();
   try{await store.put(col,rid,d);
@@ -206,6 +225,11 @@ async function save(e){
   catch(err){toast("Couldn't save on this phone.");}
 }
 
+async function shrink(file){
+  const img=await createImageBitmap(file);const m=1600,k=Math.min(1,m/Math.max(img.width,img.height));
+  const c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+  return await new Promise((res,rej)=>c.toBlob(b=>b?res(b):rej(new Error("Couldn't read that photo")),"image/jpeg",.82));
+}
 /* ---------- events ---------- */
 document.addEventListener("click",async e=>{
   if(!e.target.closest("#kp"))return;
@@ -218,6 +242,20 @@ document.addEventListener("click",async e=>{
   if(a==="editres"){form("residences",S.res);return;}
   const[col,id]=(S.open||":").split(/:(.*)/),o=S.data[col]?.[id];
   if(a==="rbedit"){form("recipes",id);}
+  else if(a==="fav"){toggleFav(id);openItem(S.open);render();toast(isFav(id)?"Added to favourites":"Removed from favourites");}
+  else if(a==="phnew"){$("phAdd").innerHTML=`<div class="phform"><label for="phF">Photo</label><input type="file" id="phF" accept="image/*"><label for="phC">Step or caption (optional)</label><input id="phC" placeholder="e.g. Fold the pastry like this"><div class="acts"><button class="kbtn pri" data-act="phup">Upload</button><button class="kbtn" data-act="phcancel">Cancel</button></div></div>`;}
+  else if(a==="phcancel"){openItem(S.open);}
+  else if(a==="phup"){const file=$("phF").files[0];if(!file)return toast("Choose a photo first.");if(!navigator.onLine||!sb)return toast("You need a connection to add photos.");
+    t.disabled=true;t.textContent="Uploading\u2026";
+    try{const blob=await shrink(file);const path=`recipes/${id}/${Date.now()}.jpg`;
+      const{error}=await sb.storage.from("photos").upload(path,blob,{contentType:"image/jpeg",upsert:false});if(error)throw error;
+      const url=sb.storage.from("photos").getPublicUrl(path).data.publicUrl;
+      const cur=S.data.recipes[id];await store.put("recipes",id,{...cur,photos:[...(cur.photos||[]),{url,path,caption:$("phC").value.trim()}],savedAt:Date.now()});
+      openItem(S.open);toast("Photo added");}
+    catch(err){toast("Couldn't upload: "+(err.message||err));openItem(S.open);}}
+  else if(a==="phdel"){const n=+t.dataset.n;$("phd"+n).innerHTML=`<button class="kbtn del sm" data-act="phdel2" data-n="${n}">Yes, remove</button>`;}
+  else if(a==="phdel2"){const n=+t.dataset.n,cur=S.data.recipes[id];const photos=(cur.photos||[]).filter((_,k)=>k!==n);
+    await store.put("recipes",id,{...cur,photos,savedAt:Date.now()});openItem(S.open);toast("Photo removed");}
   else if(a==="edit")form(col,id);
   else if(a==="copy")copy(col==="orders"?orderText(o):menuText(o));
   else if(a==="copynum")copy(o.phone);
